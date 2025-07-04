@@ -6,6 +6,32 @@ import db from '../models/index.js';
  *   name: Students
  *   description: Student management
  */
+/** 
+ * @swagger
+ * /**
+ * @swagger
+ * /students:
+ *   post:
+ *     summary: Create a new student
+ *     tags: [Students]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Student created
+ *       500:
+ *         description: Internal server error
+ */
 
 export const createStudent = async (req, res) => {
     try {
@@ -22,14 +48,74 @@ export const createStudent = async (req, res) => {
  *   get:
  *     summary: Get all students
  *     tags: [Students]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: Sort by field (e.g., name, createdAt)
+ *       - in: query
+ *         name: order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort order (asc or desc)
+ *       - in: query
+ *         name: populate
+ *         schema: { type: string }
+ *         description: Comma-separated relations to include (e.g., teachers,courses)
  *     responses:
  *       200:
  *         description: List of students
  */
+
 export const getAllStudents = async (req, res) => {
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const sort = req.query.sort || 'createdAt';
+    const order = (req.query.order === 'desc' ? 'DESC' : 'ASC');
+    const offset = (page - 1) * limit;
+    const populate = (req.query.populate || '')
+        .split(',')
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+    const include = [];
+    if (populate.includes('courses')) {
+        include.push({ model: db.Course });
+    }
+    if (populate.includes('teachers')) {
+        include.push({ model: db.Teacher });
+    }
     try {
-        const students = await db.Student.findAll({ include: db.Course });
-        res.json(students);
+        const total = await db.Student.count();
+        const students = await db.Student.findAll({ 
+            limit,
+            offset,
+            order: [[sort, order]],
+            include: include 
+        });
+        res.json(
+            {
+                total,
+                page,
+                limit,
+                data: students
+            }
+        );
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

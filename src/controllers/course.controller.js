@@ -55,38 +55,73 @@ export const createCourse = async (req, res) => {
  *         name: limit
  *         schema: { type: integer, default: 10 }
  *         description: Number of items per page
+ *       - in: query
+ *         name: sort 
+ *         schema: { type: string, default: 'createdAt' }
+ *         description: Sort by field (e.g., title, createdAt)
+ *       - in: query
+ *         name: order
+ *         schema: { type: string, enum: [asc, desc], default: asc }
+ *         description: Order by field (asc or desc)
+ *       - in: query
+ *         name: populate
+ *         schema: { type: string }
+ *         description: Comma-separated relations to include (e.g., teachers,students)
  *     responses:
  *       200:
  *         description: List of courses
  */
+
 export const getAllCourses = async (req, res) => {
-
-    // take certain amount at a time
     const limit = parseInt(req.query.limit) || 10;
-    // which page to take
     const page = parseInt(req.query.page) || 1;
+    const offset = (page - 1) * limit;
+    
+    const sortField = req.query.sort || 'createdAt';
+    const sortOrder = (req.query.order === 'desc' ? 'DESC' : 'ASC');
+    
+    const populate = (req.query.populate || '')
+        .split(',')
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
 
-    const total = await db.Course.count();
+    const include = [];
+    if (populate.includes('teachers')) {
+        include.push({
+            model: db.Teacher,
+            attributes: ['id', 'name']
+        });
+    }
+    if (populate.includes('students')) {
+        include.push({
+            model: db.Student,
+            attributes: ['id', 'name']
+        });
+    }
 
     try {
-        const courses = await db.Course.findAll(
-            {
-                // include: [db.Student, db.Teacher],
-                limit: limit, offset: (page - 1) * limit
-            }
-        );
+        const total = await db.Course.count();
+        const courses = await db.Course.findAll({
+            include,
+            limit,
+            offset,
+            order: [[sortField, sortOrder]]
+        });
+
         res.json({
             meta: {
                 totalItems: total,
-                page: page,
+                page,
                 totalPages: Math.ceil(total / limit),
             },
-            data: courses,
+            data: courses
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
+
+
 
 /**
  * @swagger

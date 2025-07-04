@@ -156,7 +156,7 @@ export const getCourseById = async (req, res) => {
  *   put:
  *     summary: Update a course
  *     tags: [Courses]
- *     parameters:
+ *     parameters: 
  *       - in: path
  *         name: id
  *         required: true

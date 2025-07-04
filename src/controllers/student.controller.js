@@ -98,7 +98,7 @@ export const getAllStudents = async (req, res) => {
         include.push({ model: db.Course });
     }
     if (populate.includes('teachers')) {
-        include.push({ model: db.Teacher });
+        include.push({ model: db.Teacher }); 
     }
     try {
         const total = await db.Student.count();

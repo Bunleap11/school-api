@@ -102,7 +102,7 @@ export const getAllTeachers = async (req, res) => {
         });
     }
     try {
-        const teachers = await db.Teacher.findAll({ 
+        const teachers = await db.Teacher.findAll({  
             where: department ? { department } : {},
             limit: parseInt(limit),
             offset: parseInt(offset),
